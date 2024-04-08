@@ -1,0 +1,20 @@
+[package]
+name = "root"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+[dev-dependencies]
+aquamarine = "0.5.0"
+
+[workspace]
+members = [
+    "internal",
+    "zero-cost-state-machine-puml",
+    "zero-cost-state-machine",
+    "zero-cost-state-machine-macro",
+]
