@@ -167,7 +167,7 @@ The above macro code would expand to the following:
 Currently this library is a work in progress; the above compiles but I have the following additional objectives before
 release:
 1. migrate from plantUML to mermaid (this should be relatively straightforward since the syntax is mostly compatible)
-2. correctly handle the possibility of exiting a state machine to enter another which is at a much higher depth
+~~2. correctly handle the possibility of exiting a state machine to enter another which is at a much higher depth~~
 3. handle parallel join and merge of multiple state machines at the type level
 4. docstrings on public facing part of the library
 5. more comprehensive testing

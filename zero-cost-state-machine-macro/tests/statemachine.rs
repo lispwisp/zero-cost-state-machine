@@ -25,6 +25,27 @@ use zero_cost_state_machine_macro::statemachine_from_puml;
 //     @enduml"#
 // }
 
+statemachine_from_puml! {
+    r#"@startuml
+    scale 600 width
+
+    [*] -> State1
+    state State2 {
+        [*] -> State3
+        state State3 {
+            [*] -> State4
+            state State4 {
+                [*] -> go
+            }
+        }
+    }
+    state State1 {
+        [*] -> ss1
+        ss1 -> State2.State3.State4.go
+    }
+    @enduml"#
+}
+
 #[test]
 fn foo() -> anyhow::Result<()> {
     Ok(())

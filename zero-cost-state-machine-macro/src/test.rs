@@ -36,12 +36,12 @@ where
 #[test]
 fn exit_composite_state() -> anyhow::Result<()> {
     let contents = r#"@startuml
-            State1 -> State2: a
-            state State2 {
-                [*] --> process: b
-                process --> [*]: c
-            }
-            State2 -> [*]: d
+        State1 -> State2: a
+        state State2 {
+            [*] --> process: b
+            process --> [*]: c
+        }
+        State2 -> [*]: d
         @enduml"#;
     let (_, diagram) = zero_cost_state_machine_puml::human_readable_error(
         zero_cost_state_machine_puml::plantuml,
@@ -105,51 +105,92 @@ fn exit_composite_state() -> anyhow::Result<()> {
     );
     Ok(())
 }
-//
-// #[test]
-// fn ex() -> anyhow::Result<()> {
-//     let contents = r#"@startuml
-//             scale 600 width
-//
-//             [*] -> State1
-//             State1 --> State2 : Succeeded
-//             State1 --> [*] : Aborted
-//             State2 --> State3 : Succeeded
-//             State2 --> [*] : Aborted
-//             state State3 {
-//                 state "Accumulate Enough Data\nLong State Name" as long1
-//                 long1 : Just a test
-//                 [*] --> long1
-//                 long1 --> long1 : New Data
-//                 long1 --> ProcessData : Enough Data
-//                 long1 --> [*]
-//             }
-//             State3 --> State3 : Failed
-//             State3 --> [*] : Succeeded / Save Result
-//             State3 --> [*] : Aborted
-//
-//             @enduml"#;
-//     let (_, diagram) =
-//         zero_cost_state_machine_puml::human_readable_error(zero_cost_state_machine_puml::plantuml)(contents)?;
-//     let aux = Aux::new(&diagram)?;
-//     let child_node_canonical_name = &btreemap! {
-//
-//     };
-//     let edge_canonical_name = &btreemap! {
-//
-//     };
-//     let relative_canonical_name = &btreemap! {
-//
-//     };
-//     assert_eq!(
-//         Aux {
-//             transition_to_start_redirection: Default::default(),
-//             transition_from_end_redirection: Default::default(),
-//             child_node_canonical_name: keys_by_reference(child_node_canonical_name),
-//             edge_canonical_name: keys_by_reference(edge_canonical_name),
-//             relative_canonical_name: keys_by_reference(relative_canonical_name)
-//         },
-//         aux
-//     );
-//     Ok(())
-// }
+
+#[test]
+fn fill_in_void() -> anyhow::Result<()> {
+    let contents = r#"@startuml
+        scale 600 width
+        
+        [*] -> State1
+        state State2 {
+           [*] -> State3
+           state State3 {
+               [*] -> go
+           }
+        }
+        state State1 {
+           [*] -> ss1
+           ss1 -> State2.State3.go
+        }
+        @enduml"#;
+    let (_, diagram) = zero_cost_state_machine_puml::human_readable_error(
+        zero_cost_state_machine_puml::plantuml,
+    )(contents)?;
+    let aux = Aux::new(&diagram)?;
+    let transition_to_start_redirection = &btreemap! {
+        transition_id!{[Start]->["State1"]} => state_id!["State1",Start],
+        transition_id!{["State2",Start]->["State2","State3"]} => state_id!["State2","State3",Start],
+    };
+    let transition_from_end_redirection = &btreemap! {};
+    let child_node_canonical_name = &btreemap! {
+        state_id![Start] => "Start".into(),
+        state_id!["State1"] => "State1".into(),
+        state_id!["State1",Start] => "Start".into(),
+        state_id!["State1","ss1"] => "Ss1".into(),
+        state_id!["State2"] => "State2".into(),
+        state_id!["State2", Start] => "Start".into(),
+        state_id!["State2","State3"] => "State3".into(),
+        state_id!["State2","State3",Start] => "Start".into(),
+        state_id!["State2","State3","go"] => "Go".into(),
+    };
+    let edge_canonical_name = &btreemap! {
+        transition_id!{[Start]->["State1"]} => None,
+        transition_id!{["State1",Start]->["State1","ss1"]} => None,
+        transition_id!{["State1","ss1"]->["State2","State3","go"]} => None,
+        transition_id!{["State2",Start]->["State2","State3"]} => None,
+        transition_id!{["State2","State3",Start]->["State2","State3","go"]} => None,
+    };
+    let relative_canonical_name = &btreemap! {
+        transition_id!{[Start]->["State1"]} => (
+            vec!["node".into(), "Start".into()],
+            1,
+            vec!["state1".into(), "node".into(), "Start".into()],
+            2
+        ),
+        transition_id!{["State1",Start]->["State1","ss1"]} => (
+            vec!["node".into(), "Start".into()],
+            2,
+            vec!["node".into(), "Ss1".into()],
+            2
+        ),
+        transition_id!{["State1","ss1"]->["State2","State3","go"]} => (
+            vec!["node".into(), "Ss1".into()],
+            2,
+            vec!["super".into(), "state2".into(), "state3".into(), "node".into(), "Go".into()],
+            3
+        ),
+        transition_id!{["State2",Start]->["State2","State3"]} => (
+            vec!["node".into(), "Start".into()],
+            2,
+            vec!["state3".into(), "node".into(), "Start".into()],
+            3
+        ),
+        transition_id!{["State2","State3",Start]->["State2","State3","go"]} => (
+            vec!["node".into(), "Start".into()],
+            3,
+            vec!["node".into(), "Go".into()],
+            3
+        )
+    };
+    assert_eq!(
+        Aux {
+            transition_to_start_redirection: all_by_reference(transition_to_start_redirection),
+            transition_from_end_redirection: all_by_reference(transition_from_end_redirection),
+            child_node_canonical_name: keys_by_reference(child_node_canonical_name),
+            edge_canonical_name: keys_by_reference(edge_canonical_name),
+            relative_canonical_name: keys_by_reference(relative_canonical_name),
+        },
+        aux
+    );
+    Ok(())
+}

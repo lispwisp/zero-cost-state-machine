@@ -240,7 +240,7 @@ impl<'a> Aux<'a> {
                 let mut i = from_node.len();
                 let mut j = to_node.len();
                 loop {
-                    if &from_node[..i] == &to_node[..j] {
+                    if i == j && &from_node[..i] == &to_node[..j] {
                         break;
                     }
                     if i < j {
@@ -252,9 +252,10 @@ impl<'a> Aux<'a> {
                         j -= 1;
                     }
                 }
-                let origin_ascent = from_node.len() - i;
-                let target_ascent = to_node.len() - j;
-                let relative_ascent = origin_ascent.saturating_sub(target_ascent);
+                let common_len = i;
+                let origin_ascent = (from_node.len() - common_len).saturating_sub(1);
+                let target_descent = (to_node.len() - common_len).saturating_sub(1);
+                let relative_ascent = origin_ascent.saturating_sub(target_descent);
 
                 let source_frames = from_node
                     .iter()
@@ -270,11 +271,10 @@ impl<'a> Aux<'a> {
                     .collect();
 
                 // stay on the same level when we have no relative ascent
-                let supers = (0..relative_ascent).map(|_| "super".into());
+                let supers = (0..origin_ascent).map(|_| "super".into());
 
                 // descend through modules when target ascent is greater than origin ascent
-                let modules = to_node[relative_ascent
-                    ..relative_ascent + target_ascent.saturating_sub(origin_ascent)]
+                let modules = to_node[common_len..to_node.len().saturating_sub(1)]
                     .into_iter()
                     .filter_map(|f| match f {
                         Frame::Start => None,
@@ -294,6 +294,19 @@ impl<'a> Aux<'a> {
                 });
 
                 let target_frames = supers.chain(modules).chain(t).collect();
+
+                dbg!(&edge);
+                dbg!(&from_node);
+                dbg!(&to_node);
+                dbg!(i);
+                dbg!(j);
+                dbg!(common_len);
+                dbg!(&origin_ascent);
+                dbg!(&target_descent);
+                dbg!(&relative_ascent);
+                dbg!(&source_frames);
+                dbg!(&target_frames);
+                println!("----------------------------------------------------------");
 
                 relative_canonical_name.insert(
                     edge,
@@ -416,7 +429,7 @@ fn module(
             }
         });
 
-    let node_edge_type_params: Vec<_> = (0..depth)
+    let node_edge_type_params = (0..)
         .flat_map(|i| {
             [
                 Ident::new(format!("N{}", i).as_str(), Span::call_site()),
@@ -427,17 +440,18 @@ fn module(
             quote! {
                 #s
             }
-        })
-        .collect();
-    let node_edge_type_params = &node_edge_type_params;
+        });
 
     let v = &quote! {S};
-    let state_struct_node_edge_type_params = node_edge_type_params.iter().chain(iter::once(v));
+    let state_struct_node_edge_type_params = node_edge_type_params
+        .clone()
+        .take(depth * 2)
+        .chain(iter::once(v.clone()));
 
     let state_struct = quote! {
         pub struct State<#(#state_struct_node_edge_type_params),*> {
             #(#node_paths)*
-            pub node: S
+            pub head: S
         }
     };
 
@@ -465,6 +479,7 @@ fn module(
                 .flat_map(|t| t.into_iter())
         )
         .map(|t| {
+            let node_edge_type_params2 = node_edge_type_params.clone();
             let transition = &if let Some(s) = &edge_canonical_name[t] {
                 let transition = Ident::new(s, Span::call_site());
                 quote! {
@@ -485,19 +500,24 @@ fn module(
             let to_node = quote! { #(#to_node)::* };
 
             let nfn = &quote! {#from_node};
-            let state_origin_node_edge_type_params = node_edge_type_params
-                .iter()
+            let state_origin_node_edge_type_params = node_edge_type_params2.clone()
+                .take(depth*2)
                 .chain(
-                    iter::once(nfn)
+                    iter::once(nfn.clone())
                 );
                 
             let tn = &quote! {#to_node};
-            let state_destination_node_edge_type_params = node_edge_type_params
-                .iter()
-                .take((target_depth.saturating_sub(1))*2)
+            
+            let state_destination_node_edge_type_params = node_edge_type_params2
+                .clone()
+                .take(depth*2)
                 .chain({
                     let it = if target_depth > origin_depth {
-                        Some([nfn, transition])
+                        Some([nfn.clone(), transition.clone()].into_iter().chain(
+                            iter::repeat_with(|| [quote! {NoState}, quote! {NoEdge}].into_iter()).flatten().take(
+                                2*target_depth.saturating_sub(2+depth)
+                            )
+                        ))
                     } else {
                         None
                     };
@@ -505,7 +525,7 @@ fn module(
                     it.flatten()
                 })
                 .chain(
-                    iter::once(tn)
+                    iter::once(tn.clone())
                 );
                 
             let targ = &quote! {
@@ -513,9 +533,9 @@ fn module(
             };
             
             let bindings = {
-                if target_depth.saturating_sub(*origin_depth) > 0 {
+                if target_depth > origin_depth {
                     Left(
-                        (0..target_depth.saturating_sub(2)).map(|i| {
+                        (0..depth).map(|i| {
                             let node_field = &Ident::new(format!("node{}", i).as_str(), Span::call_site());
                             let edge_field = &Ident::new(format!("edge{}", i).as_str(), Span::call_site());
                             quote! {
@@ -523,17 +543,26 @@ fn module(
                                 #edge_field: self.#edge_field,
                             }
                         }).chain(
-                            (target_depth.saturating_sub(2)..target_depth.saturating_sub(1)).map(|i| {
-                                let node_field = &Ident::new(format!("node{}", i).as_str(), Span::call_site());
-                                let edge_field = &Ident::new(format!("edge{}", i).as_str(), Span::call_site());
+                            iter::once({
+                                let node_field = &Ident::new(format!("node{}", depth).as_str(), Span::call_site());
+                                let edge_field = &Ident::new(format!("edge{}", depth).as_str(), Span::call_site());
                                 quote! {
                                     #node_field: #from_node,
                                     #edge_field: path,
                                 }
                             })
+                        ).chain(
+                            (depth+1..).map(|i| {
+                                let node_field = &Ident::new(format!("node{}", i).as_str(), Span::call_site());
+                                let edge_field = &Ident::new(format!("edge{}", i).as_str(), Span::call_site());
+                                quote! {
+                                    #node_field: NoNode,
+                                    #edge_field: NoEdge,
+                                }
+                            }).take(target_depth.saturating_sub(2+depth))
                         )
                     )
-                } else if target_depth.saturating_sub(*origin_depth) == 0 {
+                } else if target_depth == origin_depth {
                     Right(
                         Left(
                             (0..target_depth.saturating_sub(1)).map(|i| {
@@ -562,12 +591,14 @@ fn module(
                 }
             }.chain(iter::once({
                 quote! {
-                    node: #to_node
+                    head: #to_node
                 }
             }));
+            
+            let node_edge_type_params2 = node_edge_type_params2.take(depth*2);
 
             quote! {
-                impl<#(#node_edge_type_params),*> zero_cost_state_machine::Switch<#transition> for State<#(#state_origin_node_edge_type_params),*> {
+                impl<#(#node_edge_type_params2),*> Switch<#transition> for State<#(#state_origin_node_edge_type_params),*> {
                     type Target = #targ;
                     fn transition(self, path: #transition) -> Self::Target {
                         Self::Target {
@@ -597,6 +628,7 @@ fn module(
             }
         });
     quote! {
+        use zero_cost_state_machine::*;
         #nodemod
         #edgemod
         #state_struct
