@@ -1,4 +1,5 @@
 extern crate proc_macro;
+use std::cmp::max;
 use anyhow::bail;
 use heck::{ToSnakeCase, ToUpperCamelCase};
 use itertools::Either::{Left, Right};
@@ -274,7 +275,7 @@ impl<'a> Aux<'a> {
                 let supers = (0..origin_ascent).map(|_| "super".into());
 
                 // descend through modules when target ascent is greater than origin ascent
-                let modules = to_node[common_len..to_node.len().saturating_sub(1)]
+                let modules = to_node[common_len..max(common_len, to_node.len().saturating_sub(1))]
                     .into_iter()
                     .filter_map(|f| match f {
                         Frame::Start => None,
@@ -598,7 +599,7 @@ fn module(
             let node_edge_type_params2 = node_edge_type_params2.take(depth*2);
 
             quote! {
-                impl<#(#node_edge_type_params2),*> Switch<#transition> for State<#(#state_origin_node_edge_type_params),*> {
+                impl<#(#node_edge_type_params2),*> Path<#transition> for State<#(#state_origin_node_edge_type_params),*> {
                     type Target = #targ;
                     fn transition(self, path: #transition) -> Self::Target {
                         Self::Target {

@@ -1,4 +1,4 @@
-pub trait Switch<P> {
+pub trait Path<P> {
     type Target;
     fn transition(self, path: P) -> Self::Target;
 }
