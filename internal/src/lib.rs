@@ -223,18 +223,9 @@ macro_rules! frames {
 #[derive(Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone)]
 pub enum StateStereoType {
     #[default]
-    Start,
-    End,
     Choice,
     Fork,
     Join,
-    SdlReceive,
-    EntryPoint,
-    ExitPoint,
-    InputPin,
-    OutputPin,
-    ExpansionInput,
-    ExpansionOutput,
     Other(String),
 }
 

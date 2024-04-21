@@ -1,5 +1,5 @@
 extern crate proc_macro;
-use std::cmp::max;
+use std::cmp::{max, min};
 use anyhow::bail;
 use heck::{ToSnakeCase, ToUpperCamelCase};
 use itertools::Either::{Left, Right};
@@ -511,12 +511,12 @@ fn module(
             
             let state_destination_node_edge_type_params = node_edge_type_params2
                 .clone()
-                .take(depth*2)
+                .take(min(target_depth.saturating_sub(1), depth)*2)
                 .chain({
                     let it = if target_depth > origin_depth {
                         Some([nfn.clone(), transition.clone()].into_iter().chain(
-                            iter::repeat_with(|| [quote! {NoState}, quote! {NoEdge}].into_iter()).flatten().take(
-                                2*target_depth.saturating_sub(2+depth)
+                            iter::repeat_with(|| [quote! {NoNode}, quote! {NoEdge}].into_iter()).flatten().take(
+                                2*target_depth.saturating_sub(2+min(depth, target_depth.saturating_sub(1)))
                             )
                         ))
                     } else {
