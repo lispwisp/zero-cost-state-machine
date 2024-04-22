@@ -167,6 +167,113 @@ pub mod state3 {
 }
 ```
 
+# The value propositions of this library are:
+1. Provide a way to keep the behavior diagram of an application up to date by generating the state machine of the application from the diagram.
+2. Guarantee that the state machine that is generated is zero cost by utilizing only zero sized types.
+3. Enforcement at compile time of which transitions can be taken based on what state the application is in.
+4. Be the same abstraction regardless of whether in asynchronous contexts and synchronous contexts.
+5. Surface as much or as little information in a stack trace as desired.
+6. Allow the client to use memory resources as efficiently as possible in a context dependent manner.
+7. Give the Client **_ABSOLUTE CONTROL_** over how the stack and heap are used.
+
+#### To integrate this state machine into an application, it can be helpful to know how best to leverage it
+Typically, client code will create one impl block per State like the following:
+```rust
+impl State<node::Start> {
+    fn do_something_on_start(self) {
+        // do some stuff for the start state (omitted here) ...
+        // maybe we have some data we generated as part of this process
+        let data = vec![];
+        
+        // transition to state1, consuming and leaving the current state
+        let next_state = self.transition(());
+        
+        // now we do something for state1, which could require some data
+        next_state.do_something_on_state1(&data);
+    }
+}
+impl State<node::State1> {
+    fn do_something_on_state1(self, data: &[u8]) {
+        // as with node::Start, we could generate more data from this state
+        let more_data = String::new();
+        
+        // at some point we decide on the next edge we will take to transition out of this state
+        let edge = edge::Succeeded;
+        
+        // take the transition
+        if edge == edge::Aborted {
+            let end = self.transition(edge::Aborted);
+            end.do_something_on_end();
+        } else {
+            let state3 = self.transition(edge::Succeeded);
+            state3.do_something_on_state2(data, more_data);
+        }
+    }
+}
+impl State<node::State2> {
+    fn do_something_on_state2(self, _data: &[u8], _more_data: String) {
+        // similar as above
+        unimplemented!()
+    }
+}
+impl State<node::State3> {
+    fn do_something_on_state3(self) {
+        // similar as above
+        unimplemented!()
+    }
+}
+impl State<node::End> {
+    fn do_something_on_end(self) {
+        // similar as above
+        unimplemented!()
+    }
+}
+impl State<_, _, state3::node::Start> {
+    fn do_something_on_state3_start(self) {
+        // similar as above
+        unimplemented!()
+    }
+}
+impl State<_, _, state3::node::Long1> {
+    fn do_something_on_state3_long1(self) {
+        // similar as above
+        unimplemented!()
+    }
+}
+impl State<_, _, state3::node::ProcessData> {
+    fn do_something_on_state3_process_data(self) {
+        // similar as above
+        unimplemented!()
+    }
+}
+impl State<_, _, state3::node::End> {
+    fn do_something_on_state3_end(self) {
+        // similar as above
+        unimplemented!()
+    }
+}
+```
+
+### Example design situation
+
+Consider the case where we are oscillating between two states and generating some additional data each time we enter a state.
+
+If the oscillation is bounded to a small number, then we could just call the function to do something on the next state directly as we did in the example code above.
+This has the clear advantage of being efficient, require no heap allocation, and gives us a clear immediate understanding of the transition history in any stack trace.
+
+If the oscillation is not bounded, then we cannot continually enter function contexts or else we will blow the stack.
+So instead, we could just use a loop and an if statement to switch behavior in each oscillation.
+This would not use any additional memory on the stack
+If we need to keep a complete (or large) transition history we would store the data on the heap.
+
+If we are oscillating between many states, a useful pattern is to use a "helper" function which calls into the methods defined on the corresponding states.
+This helper function does not have to be a method on an actual state, and could just be a free standing function.
+For state machines which are generally long running and may transition between its states forever, this would be the typical architecture.
+
+_The key insight is to realize that this library does not force a particular usage of the heap OR the stack._
+The only abstractions provided by this library (individual States and Transitions) have **zero size**.
+The Client is completely free to use memory however they wish.
+
 # Library Status
 Currently this library is a work in progress; the above compiles but I have the following additional objectives before
 release:
