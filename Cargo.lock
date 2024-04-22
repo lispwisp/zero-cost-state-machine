@@ -162,13 +162,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "root"
-version = "0.1.0"
-dependencies = [
- "aquamarine",
-]
-
-[[package]]
 name = "syn"
 version = "1.0.109"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -216,6 +209,7 @@ name = "zero-cost-state-machine-macro"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "aquamarine",
  "heck",
  "itertools 0.12.1",
  "maplit",

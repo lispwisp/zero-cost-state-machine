@@ -23,3 +23,4 @@ itertools = "0.12.1"
 zero-cost-state-machine = {path = "../zero-cost-state-machine"}
 pretty_assertions = "1.4.0"
 maplit = "1.0.2"
+aquamarine = "0.5.0"
