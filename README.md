@@ -30,7 +30,6 @@ stateDiagram-v2
 A state machine can be generated from this via a procedural macro:
 
 ```rust
-    use zero_cost_state_machine::Switch;
     use zero_cost_state_machine::statsemachine_from_mermaid;
     statemachine_from_mermaid! {
         r#"
