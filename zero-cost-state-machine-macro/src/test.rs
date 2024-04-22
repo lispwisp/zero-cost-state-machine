@@ -2,13 +2,13 @@ use crate::Aux;
 use maplit::btreemap;
 use pretty_assertions::assert_eq;
 use std::collections::{BTreeMap, VecDeque};
-use zero_cost_state_machine_puml::frame;
-use zero_cost_state_machine_puml::frames;
-use zero_cost_state_machine_puml::Frame;
-use zero_cost_state_machine_puml::Frames;
-use zero_cost_state_machine_puml::StateId;
-use zero_cost_state_machine_puml::TransitionId;
-use zero_cost_state_machine_puml::{state_id, transition_id};
+use zero_cost_state_machine_mermaid::frame;
+use zero_cost_state_machine_mermaid::frames;
+use zero_cost_state_machine_mermaid::Frame;
+use zero_cost_state_machine_mermaid::Frames;
+use zero_cost_state_machine_mermaid::StateId;
+use zero_cost_state_machine_mermaid::TransitionId;
+use zero_cost_state_machine_mermaid::{state_id, transition_id};
 
 fn keys_by_reference<K, V>(m: &BTreeMap<K, V>) -> BTreeMap<&K, V>
 where
@@ -43,8 +43,8 @@ fn exit_composite_state() -> anyhow::Result<()> {
         }
         State2 -> [*]: d
         @enduml"#;
-    let (_, diagram) = zero_cost_state_machine_puml::human_readable_error(
-        zero_cost_state_machine_puml::plantuml,
+    let (_, diagram) = zero_cost_state_machine_mermaid::human_readable_error(
+        zero_cost_state_machine_mermaid::mermaid,
     )(contents)?;
     let aux = Aux::new(&diagram)?;
     let transition_to_start_redirection = &btreemap! {
@@ -123,8 +123,8 @@ fn fill_in_void() -> anyhow::Result<()> {
            ss1 -> State2.State3.go
         }
         @enduml"#;
-    let (_, diagram) = zero_cost_state_machine_puml::human_readable_error(
-        zero_cost_state_machine_puml::plantuml,
+    let (_, diagram) = zero_cost_state_machine_mermaid::human_readable_error(
+        zero_cost_state_machine_mermaid::mermaid,
     )(contents)?;
     let aux = Aux::new(&diagram)?;
     let transition_to_start_redirection = &btreemap! {

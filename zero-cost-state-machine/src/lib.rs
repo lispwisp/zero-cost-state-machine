@@ -5,4 +5,4 @@ pub trait Path<P> {
 
 pub struct NoEdge;
 
-pub struct NoState;
+pub struct NoNode;

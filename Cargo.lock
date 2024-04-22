@@ -225,11 +225,11 @@ dependencies = [
  "quote",
  "syn 2.0.58",
  "zero-cost-state-machine",
- "zero-cost-state-machine-puml",
+ "zero-cost-state-machine-mermaid",
 ]
 
 [[package]]
-name = "zero-cost-state-machine-puml"
+name = "zero-cost-state-machine-mermaid"
 version = "0.1.0"
 dependencies = [
  "anyhow",

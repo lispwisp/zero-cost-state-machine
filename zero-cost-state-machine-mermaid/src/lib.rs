@@ -65,6 +65,38 @@ fn enduml(input: &str) -> IResult<&str, &str, VerboseError<&str>> {
     delimited(space0, tag("@enduml"), multispace0)(input)
 }
 
+fn title(input: &str) -> IResult<&str, Vec<&str>, VerboseError<&str>> {
+    delimited(
+        delimited(multispace0, tag("---"), line_ending),
+        many0(delimited(
+            delimited(multispace0, token1, multispace0),
+            description,
+            line_ending,
+        )),
+        delimited(multispace0, tag("---"), line_ending),
+    )(input)
+}
+
+fn comment(input: &str) -> IResult<&str, &str, VerboseError<&str>> {
+    preceded(tag("%%"), is_not("\n"))(input)
+}
+
+fn state_diagram_v2(input: &str) -> IResult<&str, &str, VerboseError<&str>> {
+    delimited(multispace0, tag("stateDiagram-v2"), line_ending)(input)
+}
+
+fn classdef(input: &str) -> IResult<&str, &str, VerboseError<&str>> {
+    preceded(tag("classDef"), is_not("\n"))(input)
+}
+
+fn class(input: &str) -> IResult<&str, &str, VerboseError<&str>> {
+    preceded(tag("class"), is_not("\n"))(input)
+}
+
+fn direction(input: &str) -> IResult<&str, &str, VerboseError<&str>> {
+    preceded(tag("direction"), is_not("\n"))(input)
+}
+
 struct Connector;
 fn connector(input: &str) -> IResult<&str, Connector, VerboseError<&str>> {
     let (input, _) = recognize(delimited(tag("-"), take_until(">"), tag(">")))(input)?;
@@ -86,33 +118,15 @@ fn description(input: &str) -> IResult<&str, &str, VerboseError<&str>> {
 fn stereo(input: &str) -> IResult<&str, StateStereoType, VerboseError<&str>> {
     map(
         alt((
-            delimited(tag("<<"), tag_no_case("start"), tag(">>")),
-            delimited(tag("<<"), tag_no_case("choice"), tag(">>")),
-            delimited(tag("<<"), tag_no_case("fork"), tag(">>")),
-            delimited(tag("<<"), tag_no_case("join"), tag(">>")),
-            delimited(tag("<<"), tag_no_case("end"), tag(">>")),
-            delimited(tag("<<"), tag_no_case("sdlreceive"), tag(">>")),
-            delimited(tag("<<"), tag_no_case("entryPoint"), tag(">>")),
-            delimited(tag("<<"), tag_no_case("exitPoint"), tag(">>")),
-            delimited(tag("<<"), tag_no_case("inputPin"), tag(">>")),
-            delimited(tag("<<"), tag_no_case("outputPin"), tag(">>")),
-            delimited(tag("<<"), tag_no_case("expansionInput"), tag(">>")),
-            delimited(tag("<<"), tag_no_case("expansionOutput"), tag(">>")),
-            delimited(tag("<<"), token1, tag(">>")),
+            delimited(alt((tag("<<"), tag("&lt;&lt;"))), tag_no_case("choice"), alt((tag(">>"), tag("&gt;&gt;")))),
+            delimited(alt((tag("<<"), tag("&lt;&lt;"))), tag_no_case("fork"), alt((tag(">>"), tag("&gt;&gt;")))),
+            delimited(alt((tag("<<"), tag("&lt;&lt;"))), tag_no_case("join"), alt((tag(">>"), tag("&gt;&gt;")))),
+            delimited(alt((tag("<<"), tag("&lt;&lt;"))), token1, alt((tag(">>"), tag("&gt;&gt;")))),
         )),
         |t: &str| match t {
-            "start" => StateStereoType::Start,
             "choice" => StateStereoType::Choice,
             "fork" => StateStereoType::Fork,
             "join" => StateStereoType::Join,
-            "end" => StateStereoType::End,
-            "sdlreceive" => StateStereoType::SdlReceive,
-            "entryPoint" => StateStereoType::EntryPoint,
-            "exitPoint" => StateStereoType::ExitPoint,
-            "inputPin" => StateStereoType::InputPin,
-            "outputPin" => StateStereoType::OutputPin,
-            "expansionInput" => StateStereoType::ExpansionInput,
-            "expansionOutput" => StateStereoType::ExpansionOutput,
             s => StateStereoType::Other(s.to_string()),
         },
     )(input)
@@ -586,57 +600,84 @@ enum Line {
     ConcurrentHorizontal,
     ConcurrentVertical,
     Space,
+    Comment,
+    Class,
+    Classdef,
+    Direction,
     Item(Item),
     Note(Note),
 }
 fn line(input: &str) -> IResult<&str, Line, VerboseError<&str>> {
     alt((
         map(
-            terminated(space0::<&str, VerboseError<&str>>, line_ending),
+            terminated(space0::<&str, VerboseError<&str>>, preceded(opt(comment), line_ending)),
             |_| Line::Space,
         ),
         map(
-            delimited(space0, terminated(style, space0), line_ending),
+            delimited(space0, terminated(comment,  space0), line_ending),
+            |_| Line::Comment,
+        ),
+        map(
+            delimited(space0, terminated(class,  space0), preceded(opt(comment), line_ending)),
+            |_| Line::Class,
+        ),
+        map(
+            delimited(space0, terminated(classdef,  space0), preceded(opt(comment), line_ending)),
+            |_| Line::Classdef,
+        ),
+        map(
+            delimited(space0, terminated(direction,  space0), preceded(opt(comment), line_ending)),
+            |_| Line::Direction,
+        ),
+        map(
+            delimited(space0, terminated(style, space0), preceded(opt(comment), line_ending)),
             |_| Line::Style,
         ),
         map(
-            delimited(space0, terminated(json_block, space0), line_ending),
+            delimited(space0, terminated(json_block, space0), preceded(opt(comment), line_ending)),
             |_| Line::JsonBlock,
         ),
         map(
-            delimited(space0, terminated(directive, space0), line_ending),
+            delimited(space0, terminated(directive, space0), preceded(opt(comment), line_ending)),
             |_| Line::Directive,
         ),
         map(
-            delimited(space0, terminated(note, space0), line_ending),
+            delimited(space0, terminated(note, space0), preceded(opt(comment), line_ending)),
             |n| Line::Note(n),
         ),
         map(
-            delimited(space0, terminated(skin_param, space0), line_ending),
+            delimited(space0, terminated(skin_param, space0), preceded(opt(comment), line_ending)),
             |_| Line::SkinParam,
         ),
         map(
             delimited(
                 space0,
                 terminated(concurrent_horizontal, space0),
-                line_ending,
+                preceded(opt(comment), line_ending),
             ),
             |_| Line::ConcurrentHorizontal,
         ),
         map(
-            delimited(space0, terminated(concurrent_vertical, space0), line_ending),
+            delimited(space0, terminated(concurrent_vertical, space0), preceded(opt(comment), line_ending)),
             |_| Line::ConcurrentVertical,
         ),
         map(
-            delimited(space0, terminated(item, space0), line_ending),
+            delimited(space0, terminated(item, space0), preceded(opt(comment), line_ending)),
             |i| Line::Item(i),
         ),
     ))(input)
 }
 
-pub fn plantuml(input: &str) -> IResult<&str, Diagram, VerboseError<&str>> {
+pub fn mermaid(input: &str) -> IResult<&str, Diagram, VerboseError<&str>> {
     let mut context = Context::new();
-    let (input, lines) = delimited(startuml, many0(line), enduml)(input)?;
+    let (input, lines) = alt((
+        delimited(startuml, preceded(multispace0, many0(terminated(line, multispace0))), enduml),
+        preceded(
+            preceded(opt(title), state_diagram_v2),
+            preceded(multispace0, many0(terminated(line, multispace0)))
+        ),
+        map(multispace0, |_| vec![])
+    ))(input)?;
     for line in lines {
         if let Err(_) = context.process_line(line) {
             return nom::error::context("unrecognized syntax", fail)(input);
@@ -773,6 +814,10 @@ impl Context {
             Line::ConcurrentHorizontal => self.process_concurrent(),
             Line::ConcurrentVertical => self.process_concurrent(),
             Line::Space => Ok(()),
+            Line::Comment => Ok(()),
+            Line::Class => Ok(()),
+            Line::Classdef => Ok(()),
+            Line::Direction => Ok(()),
             Line::Item(item) => self.process_item(item),
             Line::Note(note) => self.process_note(note),
         }
@@ -840,18 +885,9 @@ impl Context {
                         .push(Lexicon::StateDescription(StateId(logical), description));
                 }
                 match stereotype {
-                    Some(StateStereoType::Start) => {}
-                    Some(StateStereoType::End) => {}
                     Some(StateStereoType::Choice) => {}
                     Some(StateStereoType::Fork) => {}
                     Some(StateStereoType::Join) => {}
-                    Some(StateStereoType::SdlReceive) => {}
-                    Some(StateStereoType::EntryPoint) => {}
-                    Some(StateStereoType::ExitPoint) => {}
-                    Some(StateStereoType::InputPin) => {}
-                    Some(StateStereoType::OutputPin) => {}
-                    Some(StateStereoType::ExpansionInput) => {}
-                    Some(StateStereoType::ExpansionOutput) => {}
                     Some(StateStereoType::Other(_)) => {}
                     None => {}
                 }

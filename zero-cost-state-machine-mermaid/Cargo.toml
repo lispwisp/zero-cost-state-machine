@@ -1,5 +1,5 @@
 [package]
-name = "zero-cost-state-machine-puml"
+name = "zero-cost-state-machine-mermaid"
 version = "0.1.0"
 edition = "2021"
 publish = false

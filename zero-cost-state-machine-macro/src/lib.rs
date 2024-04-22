@@ -1,11 +1,11 @@
 extern crate proc_macro;
-use std::cmp::{max, min};
 use anyhow::bail;
 use heck::{ToSnakeCase, ToUpperCamelCase};
 use itertools::Either::{Left, Right};
 use proc_macro2::Span;
 use proc_macro2::TokenStream;
 use quote::quote;
+use std::cmp::{max, min};
 use std::collections::VecDeque;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
@@ -13,9 +13,9 @@ use std::io::Read;
 use std::iter;
 use syn::LitStr;
 use syn::{parse::Parse, parse::ParseStream, parse_macro_input, Ident, Result};
-use zero_cost_state_machine_puml::{frames, TransitionId};
-use zero_cost_state_machine_puml::{state_id, Frame, StateId};
-use zero_cost_state_machine_puml::{Diagram, Frames};
+use zero_cost_state_machine_mermaid::{frames, TransitionId};
+use zero_cost_state_machine_mermaid::{state_id, Frame, StateId};
+use zero_cost_state_machine_mermaid::{Diagram, Frames};
 
 #[cfg(test)]
 mod test;
@@ -296,18 +296,18 @@ impl<'a> Aux<'a> {
 
                 let target_frames = supers.chain(modules).chain(t).collect();
 
-                dbg!(&edge);
-                dbg!(&from_node);
-                dbg!(&to_node);
-                dbg!(i);
-                dbg!(j);
-                dbg!(common_len);
-                dbg!(&origin_ascent);
-                dbg!(&target_descent);
-                dbg!(&relative_ascent);
-                dbg!(&source_frames);
-                dbg!(&target_frames);
-                println!("----------------------------------------------------------");
+                // dbg!(&edge);
+                // dbg!(&from_node);
+                // dbg!(&to_node);
+                // dbg!(i);
+                // dbg!(j);
+                // dbg!(common_len);
+                // dbg!(&origin_ascent);
+                // dbg!(&target_descent);
+                // dbg!(&relative_ascent);
+                // dbg!(&source_frames);
+                // dbg!(&target_frames);
+                // println!("----------------------------------------------------------");
 
                 relative_canonical_name.insert(
                     edge,
@@ -639,12 +639,12 @@ fn module(
 }
 
 #[proc_macro]
-pub fn statemachine_from_puml(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn statemachine_from_mermaid(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let MacroInput { contents } = parse_macro_input!(input as MacroInput);
     let contents = contents.value();
 
-    let (_, diagram) = match zero_cost_state_machine_puml::human_readable_error(
-        zero_cost_state_machine_puml::plantuml,
+    let (_, diagram) = match zero_cost_state_machine_mermaid::human_readable_error(
+        zero_cost_state_machine_mermaid::mermaid,
     )(&*contents)
     {
         Ok((input, diagram)) => (input, diagram),
@@ -672,7 +672,7 @@ pub fn statemachine_from_puml(input: proc_macro::TokenStream) -> proc_macro::Tok
 }
 
 #[proc_macro]
-pub fn statemachine_from_puml_file(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn statemachine_from_mermaid_file(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as FileName);
     let cwd = std::env::current_dir().unwrap();
     let file_path = cwd.join(&input.filename);
@@ -681,8 +681,8 @@ pub fn statemachine_from_puml_file(input: proc_macro::TokenStream) -> proc_macro
     let mut contents = String::new();
     file.read_to_string(&mut contents).unwrap();
 
-    let (_, _) = match zero_cost_state_machine_puml::human_readable_error(
-        zero_cost_state_machine_puml::plantuml,
+    let (_, _) = match zero_cost_state_machine_mermaid::human_readable_error(
+        zero_cost_state_machine_mermaid::mermaid,
     )(&*contents)
     {
         Ok((input, diagram)) => (input, diagram),

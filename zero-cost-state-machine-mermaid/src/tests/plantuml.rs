@@ -1,9 +1,11 @@
-use super::*;
 use internal::{frame, frames};
 use internal::{state_id, transition_id};
 use maplit::{btreemap, btreeset};
+use crate::{Frame, Frames, StateId, TransitionId, Diagram, StateStereoType};
+use std::collections::VecDeque;
 use pretty_assertions::assert_eq;
 
+use crate::{human_readable_error, mermaid};
 #[test]
 fn empty() -> anyhow::Result<()> {
     let data = r#"
@@ -11,7 +13,7 @@ fn empty() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert!(diagram.is_empty());
     Ok(())
@@ -25,7 +27,7 @@ fn newline() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert!(diagram.is_empty());
     Ok(())
@@ -39,7 +41,7 @@ fn state() -> anyhow::Result<()> {
             state state2
             @enduml
         "#;
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -67,7 +69,7 @@ fn unknown_stereotype() -> anyhow::Result<()> {
             state state1 <<Warning>>
             @enduml
         "#;
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -97,7 +99,7 @@ fn transition() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -138,7 +140,7 @@ fn transition_from_start() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -181,7 +183,7 @@ fn transition_to_end() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -230,7 +232,7 @@ fn simple_state() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -310,7 +312,7 @@ fn change_state_rendering() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -383,7 +385,7 @@ fn link_description() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -429,7 +431,7 @@ fn empty_composite_state() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -459,7 +461,7 @@ fn transition_to_end_in_composite_state() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -519,7 +521,7 @@ fn quoted_composite_state() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -550,7 +552,7 @@ fn quoted_composite_state2() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -582,7 +584,7 @@ fn transition_to_history_in_composite() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -650,7 +652,7 @@ fn nested_composite_state() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -776,7 +778,7 @@ fn sub_state() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -820,7 +822,7 @@ fn sub_state_to_sub_state() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -900,7 +902,7 @@ fn long_name() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -1044,7 +1046,7 @@ fn history() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -1202,7 +1204,7 @@ fn fork() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -1320,7 +1322,7 @@ fn concurrent_horizontal() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -1461,7 +1463,7 @@ fn concurrent_vertical() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -1596,7 +1598,7 @@ fn conditional_choice() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -1696,16 +1698,16 @@ fn stereotypes_full_example() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
             state_stereotype: btreemap! {
                 state_id!["choice1"] => StateStereoType::Choice,
-                state_id!["end3"] => StateStereoType::End,
+                state_id!["end3"] => StateStereoType::Other(String::from("end")),
                 state_id!["fork1"] => StateStereoType::Fork,
                 state_id!["join2"] => StateStereoType::Join,
-                state_id!["start1"] => StateStereoType::Start,
+                state_id!["start1"] => StateStereoType::Other(String::from("start")),
             },
             state_parent: btreemap! {
                 state_id![Start] => state_id![],
@@ -1834,14 +1836,14 @@ fn point() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
             state_stereotype: btreemap! {
-                state_id!["Somp","entry1"] => StateStereoType::EntryPoint,
-                state_id!["Somp","entry2"] => StateStereoType::EntryPoint,
-                state_id!["Somp","exitA"] => StateStereoType::ExitPoint,
+                state_id!["Somp","entry1"] => StateStereoType::Other(String::from("entryPoint")),
+                state_id!["Somp","entry2"] => StateStereoType::Other(String::from("entryPoint")),
+                state_id!["Somp","exitA"] => StateStereoType::Other(String::from("exitPoint")),
             },
             state_parent: btreemap! {
                 state_id![Start] => state_id![],
@@ -1958,14 +1960,14 @@ fn pin() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
             state_stereotype: btreemap! {
-                state_id!["Somp","entry1"] => StateStereoType::InputPin,
-                state_id!["Somp","entry2"] => StateStereoType::InputPin,
-                state_id!["Somp","exitA"] => StateStereoType::OutputPin,
+                state_id!["Somp","entry1"] => StateStereoType::Other(String::from("inputPin")),
+                state_id!["Somp","entry2"] => StateStereoType::Other(String::from("inputPin")),
+                state_id!["Somp","exitA"] => StateStereoType::Other(String::from("outputPin")),
             },
             state_parent: btreemap! {
                 state_id![Start] => state_id![],
@@ -2082,14 +2084,14 @@ fn expansion() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
             state_stereotype: btreemap! {
-                state_id!["Somp","entry1"] => StateStereoType::ExpansionInput,
-                state_id!["Somp","entry2"] => StateStereoType::ExpansionInput,
-                state_id!["Somp","exitA"] => StateStereoType::ExpansionOutput,
+                state_id!["Somp","entry1"] => StateStereoType::Other(String::from("expansionInput")),
+                state_id!["Somp","entry2"] => StateStereoType::Other(String::from("expansionInput")),
+                state_id!["Somp","exitA"] => StateStereoType::Other(String::from("expansionOutput")),
             },
             state_parent: btreemap! {
                 state_id![Start] => state_id![],
@@ -2199,7 +2201,7 @@ fn arrow_direction() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -2283,7 +2285,7 @@ fn line_color_and_style() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -2399,7 +2401,7 @@ fn note() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -2467,7 +2469,7 @@ fn floating_note() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -2499,7 +2501,7 @@ fn note_on_link() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -2571,7 +2573,7 @@ fn note_on_composite_state() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -2651,7 +2653,7 @@ fn inline_color() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -2692,7 +2694,7 @@ fn inline_color_composite_state() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -2797,7 +2799,7 @@ fn skinparam() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -2901,7 +2903,7 @@ fn skinparam_specifics() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -2999,7 +3001,7 @@ fn style1() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -3097,13 +3099,13 @@ fn style2() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
             state_stereotype: btreemap! {
                 state_id!["choice1"] => StateStereoType::Choice,
-                state_id!["end3"] => StateStereoType::End,
+                state_id!["end3"] => StateStereoType::Other(String::from("end")),
             },
             state_parent: btreemap! {
                 state_id!["choice1"] => state_id![],
@@ -3181,7 +3183,7 @@ fn inline_style1() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -3267,7 +3269,7 @@ fn inline_style2() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -3339,7 +3341,7 @@ fn inline_style3() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -3398,7 +3400,7 @@ fn alias1() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -3488,7 +3490,7 @@ fn alias2() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {
@@ -3580,7 +3582,7 @@ fn json1() -> anyhow::Result<()> {
             @enduml
         "#;
 
-    let (input, diagram) = human_readable_error(plantuml)(data)?;
+    let (input, diagram) = human_readable_error(mermaid)(data)?;
     assert!(input.is_empty());
     assert_eq!(
         Diagram {

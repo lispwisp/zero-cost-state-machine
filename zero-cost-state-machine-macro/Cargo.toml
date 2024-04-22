@@ -16,7 +16,7 @@ proc-macro2 = "1.0.78"
 anyhow = "1.0.80"
 nom = "7.1.3"
 heck = "0.4.1"
-zero-cost-state-machine-puml = { path = "../zero-cost-state-machine-puml" }
+zero-cost-state-machine-mermaid = { path = "../zero-cost-state-machine-mermaid" }
 itertools = "0.12.1"
 
 [dev-dependencies]
