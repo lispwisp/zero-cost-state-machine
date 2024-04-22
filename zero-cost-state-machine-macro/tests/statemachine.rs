@@ -1,4 +1,3 @@
-use zero_cost_state_machine::Path;
 use zero_cost_state_machine_macro::statemachine_from_mermaid;
 
 // statemachine_from_puml! {
